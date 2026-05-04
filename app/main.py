@@ -3,6 +3,7 @@ from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 
 from app.services.telegram_client import TelegramClient
+from app.services.max_client import MaxClient
 
 app = FastAPI(title="University News Crossposter")
 
@@ -65,11 +66,21 @@ async def create_post(
                 })
 
         if "max" in selected_platforms:
-            results.append({
-                "platform": "MAX",
-                "message": "адаптер пока не подключён",
-                "type": "warning",
-            })
+            try:
+                max_client = MaxClient()
+                await max_client.send_text(text)
+
+                results.append({
+                    "platform": "MAX",
+                    "message": "публикация успешно отправлена",
+                    "type": "success",
+                })
+            except Exception as error:
+                results.append({
+                    "platform": "MAX",
+                    "message": f"ошибка отправки: {error}",
+                    "type": "error",
+                })         
 
         if "vk" in selected_platforms:
             results.append({
