@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Создать публикацию</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #f4f7fb;
+            margin: 0;
+            padding: 40px;
+            color: #172033;
+        }
+
+        .container {
+            max-width: 760px;
+            margin: 0 auto;
+            background: white;
+            padding: 32px;
+            border-radius: 18px;
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.08);
+        }
+
+        h1 {
+            margin-top: 0;
+            color: #0b3d91;
+        }
+
+        textarea {
+            width: 100%;
+            min-height: 260px;
+            padding: 16px;
+            font-size: 16px;
+            line-height: 1.5;
+            border: 1px solid #ccd6e5;
+            border-radius: 12px;
+            resize: vertical;
+            box-sizing: border-box;
+        }
+
+        button {
+            margin-top: 18px;
+            background: #0b63ce;
+            color: white;
+            border: none;
+            padding: 14px 22px;
+            font-size: 16px;
+            border-radius: 12px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background: #084fa6;
+        }
+
+        .status {
+            margin-bottom: 20px;
+            padding: 14px 16px;
+            border-radius: 12px;
+            background: #e8f5e9;
+            color: #1b5e20;
+        }
+
+        .hint {
+            color: #667085;
+            font-size: 14px;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Создать публикацию</h1>
+
+        {% if status %}
+            <div class="status">{{ status }}</div>
+        {% endif %}
+
+        <form method="post" action="/create">
+            <textarea name="text" placeholder="Вставь текст новости..." required>{{ text or "" }}</textarea>
+            <button type="submit">Отправить в Telegram</button>
+        </form>
+
+        <div class="hint">
+            Пока это MVP: отправляем обычный текст в Telegram. Жирный, курсив, медиа и отложку добавим позже.
+        </div>
+    </div>
+</body>
+</html>
