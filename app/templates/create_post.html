@@ -113,9 +113,12 @@
             </div>
         {% endif %}
 
-        <form method="post" action="/create">
+        <form method="post" action="/create" enctype="multipart/form-data">
             <textarea name="text" placeholder="Вставь текст новости..." required>{{ text or "" }}</textarea>
-
+            <div style="margin-top: 16px;">
+                <label><b>Фото/видео к публикации:</b></label><br><br>
+                <input type="file" name="media_files" multiple accept="image/*,video/*">
+            </div>
             <div class="platforms">
                 <label class="platform">
                     <input type="checkbox" name="platforms" value="telegram"

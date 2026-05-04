@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Form, Request
+from fastapi import FastAPI, File, Form, Request, UploadFile
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 
@@ -16,7 +16,7 @@ def home():
     return {
         "status": "ok",
         "message": "University News Crossposter is running",
-        "create_post_url": "/create"
+        "create_post_url": "/create",
     }
 
 
@@ -29,7 +29,7 @@ def create_post_page(request: Request):
             "results": None,
             "text": None,
             "selected_platforms": ["telegram"],
-        }
+        },
     )
 
 
@@ -38,9 +38,35 @@ async def create_post(
     request: Request,
     text: str = Form(...),
     platforms: list[str] | None = Form(default=None),
+    media_files: list[UploadFile] | None = File(default=None),
 ):
     selected_platforms = platforms or []
     results = []
+    media_files_data = []
+
+    if media_files:
+        for file in media_files:
+            if not file.filename:
+                continue
+
+            if file.content_type and file.content_type.startswith("image/"):
+                kind = "image"
+            elif file.content_type and file.content_type.startswith("video/"):
+                kind = "video"
+            else:
+                results.append({
+                    "platform": "Файл",
+                    "message": f"{file.filename}: пока поддерживаются только изображения и видео",
+                    "type": "warning",
+                })
+                continue
+
+            media_files_data.append({
+                "filename": file.filename,
+                "content_type": file.content_type,
+                "kind": kind,
+                "data": await file.read(),
+            })
 
     if not selected_platforms:
         results.append({
@@ -52,7 +78,7 @@ async def create_post(
         if "telegram" in selected_platforms:
             try:
                 telegram = TelegramClient()
-                await telegram.send_text(text)
+                await telegram.send_post(text, media_files_data)
 
                 results.append({
                     "platform": "Telegram",
@@ -69,7 +95,7 @@ async def create_post(
         if "max" in selected_platforms:
             try:
                 max_client = MaxClient()
-                await max_client.send_text(text)
+                await max_client.send_post(text, media_files_data)
 
                 results.append({
                     "platform": "MAX",
@@ -81,12 +107,16 @@ async def create_post(
                     "platform": "MAX",
                     "message": f"ошибка отправки: {error}",
                     "type": "error",
-                })         
+                })
 
         if "vk" in selected_platforms:
             try:
                 vk_client = VkClient()
-                await vk_client.send_text(text)
+
+                if media_files_data:
+                    await vk_client.send_text_with_photos(text, media_files_data)
+                else:
+                    await vk_client.send_text(text)
 
                 results.append({
                     "platform": "VK",
@@ -99,7 +129,6 @@ async def create_post(
                     "message": f"ошибка отправки: {error}",
                     "type": "error",
                 })
-  
 
     return templates.TemplateResponse(
         request=request,
@@ -108,7 +137,7 @@ async def create_post(
             "results": results,
             "text": text,
             "selected_platforms": selected_platforms,
-        }
+        },
     )
 
 
@@ -124,5 +153,5 @@ async def test_telegram():
 
     return {
         "status": "sent",
-        "telegram_response": result
+        "telegram_response": result,
     }
