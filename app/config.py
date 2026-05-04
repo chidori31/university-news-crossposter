@@ -10,6 +10,9 @@ class Settings:
 
     max_bot_token: str = os.getenv("MAX_BOT_TOKEN", "")
     max_chat_id: str = os.getenv("MAX_CHAT_ID", "")
-
+    
+    vk_access_token: str = os.getenv("VK_ACCESS_TOKEN", "")
+    vk_group_id: str = os.getenv("VK_GROUP_ID", "")
+    vk_api_version: str = os.getenv("VK_API_VERSION", "5.199")
 
 settings = Settings()

@@ -4,6 +4,7 @@ from fastapi.templating import Jinja2Templates
 
 from app.services.telegram_client import TelegramClient
 from app.services.max_client import MaxClient
+from app.services.vk_client import VkClient
 
 app = FastAPI(title="University News Crossposter")
 
@@ -83,11 +84,22 @@ async def create_post(
                 })         
 
         if "vk" in selected_platforms:
-            results.append({
-                "platform": "VK",
-                "message": "адаптер пока не подключён",
-                "type": "warning",
-            })
+            try:
+                vk_client = VkClient()
+                await vk_client.send_text(text)
+
+                results.append({
+                    "platform": "VK",
+                    "message": "публикация успешно отправлена",
+                    "type": "success",
+                })
+            except Exception as error:
+                results.append({
+                    "platform": "VK",
+                    "message": f"ошибка отправки: {error}",
+                    "type": "error",
+                })
+  
 
     return templates.TemplateResponse(
         request=request,
