@@ -13,7 +13,7 @@
         }
 
         .container {
-            max-width: 760px;
+            max-width: 820px;
             margin: 0 auto;
             background: white;
             padding: 32px;
@@ -38,8 +38,22 @@
             box-sizing: border-box;
         }
 
+        .platforms {
+            display: flex;
+            gap: 12px;
+            margin: 18px 0;
+            flex-wrap: wrap;
+        }
+
+        .platform {
+            border: 1px solid #ccd6e5;
+            padding: 12px 16px;
+            border-radius: 12px;
+            background: #f8fbff;
+            cursor: pointer;
+        }
+
         button {
-            margin-top: 18px;
             background: #0b63ce;
             color: white;
             border: none;
@@ -53,18 +67,35 @@
             background: #084fa6;
         }
 
-        .status {
+        .results {
             margin-bottom: 20px;
-            padding: 14px 16px;
+        }
+
+        .result {
+            padding: 12px 14px;
             border-radius: 12px;
+            margin-bottom: 8px;
+        }
+
+        .success {
             background: #e8f5e9;
             color: #1b5e20;
+        }
+
+        .warning {
+            background: #fff8e1;
+            color: #795548;
+        }
+
+        .error {
+            background: #ffebee;
+            color: #b71c1c;
         }
 
         .hint {
             color: #667085;
             font-size: 14px;
-            margin-top: 10px;
+            margin-top: 12px;
         }
     </style>
 </head>
@@ -72,17 +103,44 @@
     <div class="container">
         <h1>Создать публикацию</h1>
 
-        {% if status %}
-            <div class="status">{{ status }}</div>
+        {% if results %}
+            <div class="results">
+                {% for result in results %}
+                    <div class="result {{ result.type }}">
+                        <b>{{ result.platform }}</b>: {{ result.message }}
+                    </div>
+                {% endfor %}
+            </div>
         {% endif %}
 
         <form method="post" action="/create">
             <textarea name="text" placeholder="Вставь текст новости..." required>{{ text or "" }}</textarea>
-            <button type="submit">Отправить в Telegram</button>
+
+            <div class="platforms">
+                <label class="platform">
+                    <input type="checkbox" name="platforms" value="telegram"
+                        {% if not selected_platforms or "telegram" in selected_platforms %}checked{% endif %}>
+                    Telegram
+                </label>
+
+                <label class="platform">
+                    <input type="checkbox" name="platforms" value="max"
+                        {% if "max" in selected_platforms %}checked{% endif %}>
+                    MAX
+                </label>
+
+                <label class="platform">
+                    <input type="checkbox" name="platforms" value="vk"
+                        {% if "vk" in selected_platforms %}checked{% endif %}>
+                    VK
+                </label>
+            </div>
+
+            <button type="submit">Опубликовать</button>
         </form>
 
         <div class="hint">
-            Пока это MVP: отправляем обычный текст в Telegram. Жирный, курсив, медиа и отложку добавим позже.
+            Сейчас реально работает Telegram. MAX и VK добавим следующими адаптерами.
         </div>
     </div>
 </body>

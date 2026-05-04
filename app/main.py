@@ -24,23 +24,67 @@ def create_post_page(request: Request):
         request=request,
         name="create_post.html",
         context={
-            "status": None,
+            "results": None,
             "text": None,
+            "selected_platforms": ["telegram"],
         }
     )
 
 
 @app.post("/create", response_class=HTMLResponse)
-async def create_post(request: Request, text: str = Form(...)):
-    telegram = TelegramClient()
-    await telegram.send_text(text)
+async def create_post(
+    request: Request,
+    text: str = Form(...),
+    platforms: list[str] | None = Form(default=None),
+):
+    selected_platforms = platforms or []
+    results = []
+
+    if not selected_platforms:
+        results.append({
+            "platform": "Ошибка",
+            "message": "Выбери хотя бы одну площадку для публикации",
+            "type": "error",
+        })
+    else:
+        if "telegram" in selected_platforms:
+            try:
+                telegram = TelegramClient()
+                await telegram.send_text(text)
+
+                results.append({
+                    "platform": "Telegram",
+                    "message": "публикация успешно отправлена",
+                    "type": "success",
+                })
+            except Exception as error:
+                results.append({
+                    "platform": "Telegram",
+                    "message": f"ошибка отправки: {error}",
+                    "type": "error",
+                })
+
+        if "max" in selected_platforms:
+            results.append({
+                "platform": "MAX",
+                "message": "адаптер пока не подключён",
+                "type": "warning",
+            })
+
+        if "vk" in selected_platforms:
+            results.append({
+                "platform": "VK",
+                "message": "адаптер пока не подключён",
+                "type": "warning",
+            })
 
     return templates.TemplateResponse(
         request=request,
         name="create_post.html",
         context={
-            "status": "Публикация отправлена в Telegram",
+            "results": results,
             "text": text,
+            "selected_platforms": selected_platforms,
         }
     )
 
