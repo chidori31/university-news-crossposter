@@ -219,3 +219,93 @@ def get_publish_logs(post_id: int) -> list[dict]:
         }
         for row in rows
     ]
+
+def get_scheduled_post(post_id: int) -> dict | None:
+    with get_connection() as connection:
+        row = connection.execute(
+            """
+            SELECT id, text, platforms, publish_at, status, created_at
+            FROM scheduled_posts
+            WHERE id = ?
+            """,
+            (post_id,),
+        ).fetchone()
+
+    if row is None:
+        return None
+
+    return {
+        "id": row["id"],
+        "text": row["text"],
+        "platforms": json.loads(row["platforms"]),
+        "publish_at": row["publish_at"],
+        "status": row["status"],
+        "created_at": row["created_at"],
+    }
+
+
+def update_scheduled_post(
+    post_id: int,
+    text: str,
+    platforms: list[str],
+    publish_at: str,
+) -> None:
+    with get_connection() as connection:
+        connection.execute(
+            """
+            UPDATE scheduled_posts
+            SET text = ?, platforms = ?, publish_at = ?
+            WHERE id = ? AND status = 'scheduled'
+            """,
+            (
+                text,
+                json.dumps(platforms, ensure_ascii=False),
+                publish_at,
+                post_id,
+            ),
+        )
+        connection.commit()
+
+
+def delete_scheduled_post(post_id: int) -> None:
+    with get_connection() as connection:
+        media_rows = connection.execute(
+            """
+            SELECT file_path
+            FROM scheduled_post_media
+            WHERE post_id = ?
+            """,
+            (post_id,),
+        ).fetchall()
+
+        for row in media_rows:
+            file_path = Path(row["file_path"])
+
+            if file_path.exists():
+                file_path.unlink()
+
+        connection.execute(
+            """
+            DELETE FROM scheduled_post_media
+            WHERE post_id = ?
+            """,
+            (post_id,),
+        )
+
+        connection.execute(
+            """
+            DELETE FROM publish_logs
+            WHERE post_id = ?
+            """,
+            (post_id,),
+        )
+
+        connection.execute(
+            """
+            DELETE FROM scheduled_posts
+            WHERE id = ? AND status = 'scheduled'
+            """,
+            (post_id,),
+        )
+
+        connection.commit()

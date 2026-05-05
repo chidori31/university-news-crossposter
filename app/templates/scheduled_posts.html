@@ -109,9 +109,21 @@
                     <div class="text">{{ post.text }}</div>
 
                     {% if post.status == "scheduled" %}
-                        <form method="post" action="/scheduled/{{ post.id }}/cancel">
-                            <button type="submit">Отменить</button>
-                        </form>
+                        <div style="display: flex; gap: 10px; margin-top: 12px;">
+                            <a href="/scheduled/{{ post.id }}/edit"
+                            style="background: #0b63ce; color: white; padding: 8px 14px; border-radius: 10px;">
+                                Редактировать
+                            </a>
+
+                            <form method="post" action="/scheduled/{{ post.id }}/cancel">
+                                <button type="submit">Отменить</button>
+                            </form>
+
+                            <form method="post" action="/scheduled/{{ post.id }}/delete"
+                                onsubmit="return confirm('Удалить эту отложенную публикацию?');">
+                                <button type="submit" style="background: #6d1b1b;">Удалить</button>
+                            </form>
+                        </div>
                     {% endif %}
 
                     {% if post.logs %}

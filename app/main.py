@@ -8,9 +8,12 @@ from app.database import init_database
 from app.services.max_client import MaxClient
 from app.services.scheduled_posts import (
     cancel_scheduled_post,
+    delete_scheduled_post,
     get_posts_overview,
     get_publish_logs,
+    get_scheduled_post,
     save_scheduled_post,
+    update_scheduled_post,
 )
 from app.services.scheduler import shutdown_scheduler, start_scheduler
 from app.services.telegram_client import TelegramClient
@@ -228,6 +231,119 @@ def cancel_post(post_id: int):
         status_code=303,
     )
 
+@app.get("/scheduled/{post_id}/edit", response_class=HTMLResponse)
+def edit_scheduled_post_page(request: Request, post_id: int):
+    post = get_scheduled_post(post_id)
+
+    if post is None:
+        return templates.TemplateResponse(
+            request=request,
+            name="edit_scheduled_post.html",
+            context={
+                "post": None,
+                "status": "Публикация не найдена",
+                "status_type": "error",
+            },
+        )
+
+    if post["status"] != "scheduled":
+        return templates.TemplateResponse(
+            request=request,
+            name="edit_scheduled_post.html",
+            context={
+                "post": post,
+                "status": "Редактировать можно только отложенные публикации",
+                "status_type": "error",
+            },
+        )
+
+    return templates.TemplateResponse(
+        request=request,
+        name="edit_scheduled_post.html",
+        context={
+            "post": post,
+            "status": None,
+            "status_type": None,
+        },
+    )
+
+
+@app.post("/scheduled/{post_id}/edit", response_class=HTMLResponse)
+def edit_scheduled_post(
+    request: Request,
+    post_id: int,
+    text: str = Form(...),
+    platforms: list[str] | None = Form(default=None),
+    publish_at: str = Form(...),
+):
+    selected_platforms = platforms or []
+    post = get_scheduled_post(post_id)
+
+    if post is None:
+        return templates.TemplateResponse(
+            request=request,
+            name="edit_scheduled_post.html",
+            context={
+                "post": None,
+                "status": "Публикация не найдена",
+                "status_type": "error",
+            },
+        )
+
+    if post["status"] != "scheduled":
+        return templates.TemplateResponse(
+            request=request,
+            name="edit_scheduled_post.html",
+            context={
+                "post": post,
+                "status": "Редактировать можно только отложенные публикации",
+                "status_type": "error",
+            },
+        )
+
+    if not selected_platforms:
+        post["text"] = text
+        post["publish_at"] = publish_at
+        post["platforms"] = selected_platforms
+
+        return templates.TemplateResponse(
+            request=request,
+            name="edit_scheduled_post.html",
+            context={
+                "post": post,
+                "status": "Выбери хотя бы одну площадку",
+                "status_type": "error",
+            },
+        )
+
+    update_scheduled_post(
+        post_id=post_id,
+        text=text,
+        platforms=selected_platforms,
+        publish_at=publish_at,
+    )
+
+    updated_post = get_scheduled_post(post_id)
+
+    return templates.TemplateResponse(
+        request=request,
+        name="edit_scheduled_post.html",
+        context={
+            "post": updated_post,
+            "status": "Публикация обновлена",
+            "status_type": None,
+        },
+    )
+
+
+@app.post("/scheduled/{post_id}/delete")
+def delete_post(post_id: int):
+    delete_scheduled_post(post_id)
+
+    return RedirectResponse(
+        url="/scheduled",
+        status_code=303,
+    )
 
 @app.post("/test-telegram")
 async def test_telegram():
