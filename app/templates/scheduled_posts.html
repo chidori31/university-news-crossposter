@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Очередь публикаций</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #f4f7fb;
+            margin: 0;
+            padding: 40px;
+            color: #172033;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background: white;
+            padding: 32px;
+            border-radius: 18px;
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.08);
+        }
+
+        h1 {
+            margin-top: 0;
+            color: #0b3d91;
+        }
+
+        a {
+            color: #0b63ce;
+            text-decoration: none;
+        }
+
+        .post {
+            border: 1px solid #d6e0ee;
+            border-radius: 14px;
+            padding: 18px;
+            margin-bottom: 16px;
+            background: #fbfdff;
+        }
+
+        .meta {
+            color: #667085;
+            font-size: 14px;
+            margin-bottom: 8px;
+        }
+
+        .status {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 999px;
+            font-size: 13px;
+            font-weight: bold;
+        }
+
+        .scheduled { background: #e3f2fd; color: #0d47a1; }
+        .published { background: #e8f5e9; color: #1b5e20; }
+        .failed { background: #ffebee; color: #b71c1c; }
+        .cancelled { background: #eeeeee; color: #424242; }
+        .publishing { background: #fff8e1; color: #795548; }
+
+        .text {
+            white-space: pre-wrap;
+            margin: 12px 0;
+        }
+
+        button {
+            background: #d32f2f;
+            color: white;
+            border: none;
+            padding: 8px 14px;
+            border-radius: 10px;
+            cursor: pointer;
+        }
+
+        .logs {
+            margin-top: 12px;
+            font-size: 14px;
+        }
+
+        .log {
+            padding: 8px 10px;
+            border-radius: 8px;
+            margin-top: 6px;
+            background: #f1f5f9;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Очередь и история публикаций</h1>
+        <p><a href="/scheduled">Очередь и история публикаций →</a></p>
+        <p><a href="/create">← Создать публикацию</a></p>
+
+        {% if posts %}
+            {% for post in posts %}
+                <div class="post">
+                    <div class="meta">
+                        ID: {{ post.id }} |
+                        Время: {{ post.publish_at }} |
+                        Площадки: {{ post.platforms | join(", ") }} |
+                        Медиа: {{ post.media_count }}
+                    </div>
+
+                    <div>
+                        <span class="status {{ post.status }}">{{ post.status }}</span>
+                    </div>
+
+                    <div class="text">{{ post.text }}</div>
+
+                    {% if post.status == "scheduled" %}
+                        <form method="post" action="/scheduled/{{ post.id }}/cancel">
+                            <button type="submit">Отменить</button>
+                        </form>
+                    {% endif %}
+
+                    {% if post.logs %}
+                        <div class="logs">
+                            <b>Логи:</b>
+                            {% for log in post.logs %}
+                                <div class="log">
+                                    {{ log.created_at }} |
+                                    {{ log.platform }} |
+                                    {{ log.status }} |
+                                    {{ log.message }}
+                                </div>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                </div>
+            {% endfor %}
+        {% else %}
+            <p>Публикаций пока нет.</p>
+        {% endif %}
+    </div>
+</body>
+</html>

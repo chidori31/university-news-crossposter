@@ -1,20 +1,28 @@
-from fastapi import FastAPI, File, Form, Request, UploadFile
-from fastapi.responses import HTMLResponse
-from fastapi.templating import Jinja2Templates
-
 from contextlib import asynccontextmanager
 
-from app.database import init_database
-from app.services.scheduled_posts import save_scheduled_post
+from fastapi import FastAPI, File, Form, Request, UploadFile
+from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.templating import Jinja2Templates
 
-from app.services.telegram_client import TelegramClient
+from app.database import init_database
 from app.services.max_client import MaxClient
+from app.services.scheduled_posts import (
+    cancel_scheduled_post,
+    get_posts_overview,
+    get_publish_logs,
+    save_scheduled_post,
+)
+from app.services.scheduler import shutdown_scheduler, start_scheduler
+from app.services.telegram_client import TelegramClient
 from app.services.vk_client import VkClient
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     init_database()
+    start_scheduler()
     yield
+    shutdown_scheduler()
 
 
 app = FastAPI(
@@ -31,6 +39,7 @@ def home():
         "status": "ok",
         "message": "University News Crossposter is running",
         "create_post_url": "/create",
+        "scheduled_posts_url": "/scheduled",
     }
 
 
@@ -191,6 +200,32 @@ async def create_post(
             "text": text,
             "selected_platforms": selected_platforms,
         },
+    )
+
+
+@app.get("/scheduled", response_class=HTMLResponse)
+def scheduled_posts_page(request: Request):
+    posts = get_posts_overview()
+
+    for post in posts:
+        post["logs"] = get_publish_logs(post["id"])
+
+    return templates.TemplateResponse(
+        request=request,
+        name="scheduled_posts.html",
+        context={
+            "posts": posts,
+        },
+    )
+
+
+@app.post("/scheduled/{post_id}/cancel")
+def cancel_post(post_id: int):
+    cancel_scheduled_post(post_id)
+
+    return RedirectResponse(
+        url="/scheduled",
+        status_code=303,
     )
 
 
