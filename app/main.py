@@ -2,11 +2,25 @@ from fastapi import FastAPI, File, Form, Request, UploadFile
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 
+from contextlib import asynccontextmanager
+
+from app.database import init_database
+from app.services.scheduled_posts import save_scheduled_post
+
 from app.services.telegram_client import TelegramClient
 from app.services.max_client import MaxClient
 from app.services.vk_client import VkClient
 
-app = FastAPI(title="University News Crossposter")
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    init_database()
+    yield
+
+
+app = FastAPI(
+    title="University News Crossposter",
+    lifespan=lifespan,
+)
 
 templates = Jinja2Templates(directory="app/templates")
 
@@ -38,6 +52,8 @@ async def create_post(
     request: Request,
     text: str = Form(...),
     platforms: list[str] | None = Form(default=None),
+    publish_mode: str = Form("now"),
+    publish_at: str | None = Form(default=None),
     media_files: list[UploadFile] | None = File(default=None),
 ):
     selected_platforms = platforms or []
@@ -67,6 +83,43 @@ async def create_post(
                 "kind": kind,
                 "data": await file.read(),
             })
+
+    if publish_mode == "schedule":
+        if not publish_at:
+            results.append({
+                "platform": "Ошибка",
+                "message": "Укажи дату и время для отложенной публикации",
+                "type": "error",
+            })
+        elif not selected_platforms:
+            results.append({
+                "platform": "Ошибка",
+                "message": "Выбери хотя бы одну площадку для публикации",
+                "type": "error",
+            })
+        else:
+            post_id = save_scheduled_post(
+                text=text,
+                platforms=selected_platforms,
+                publish_at=publish_at,
+                media_files_data=media_files_data,
+            )
+
+            results.append({
+                "platform": "Отложка",
+                "message": f"публикация сохранена в очередь, ID: {post_id}",
+                "type": "success",
+            })
+
+        return templates.TemplateResponse(
+            request=request,
+            name="create_post.html",
+            context={
+                "results": results,
+                "text": text,
+                "selected_platforms": selected_platforms,
+            },
+        )
 
     if not selected_platforms:
         results.append({

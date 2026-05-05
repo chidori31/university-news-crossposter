@@ -138,7 +138,25 @@
                     VK
                 </label>
             </div>
+            <div style="margin: 18px 0;">
+                <label><b>Время публикации:</b></label><br><br>
 
+                <label>
+                    <input type="radio" name="publish_mode" value="now" checked>
+                    Опубликовать сейчас
+                </label>
+
+                <br>
+
+                <label>
+                    <input type="radio" name="publish_mode" value="schedule">
+                    Запланировать
+                </label>
+
+                <br><br>
+
+                <input type="datetime-local" name="publish_at">
+            </div>
             <button type="submit">Опубликовать</button>
         </form>
 
