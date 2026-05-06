@@ -90,6 +90,94 @@
         }
     </style>
 </head>
+<script>
+    function wrapText(tag) {
+        const textarea = document.getElementById("postText");
+        const start = textarea.selectionStart;
+        const end = textarea.selectionEnd;
+        const selected = textarea.value.substring(start, end);
+
+        let wrapped;
+
+        if (selected) {
+            wrapped = `<${tag}>${selected}</${tag}>`;
+        } else {
+            wrapped = `<${tag}></${tag}>`;
+        }
+
+        const before = textarea.value.substring(0, start);
+        const after = textarea.value.substring(end);
+
+        textarea.value = before + wrapped + after;
+        textarea.focus();
+
+        if (selected) {
+            textarea.selectionStart = start;
+            textarea.selectionEnd = start + wrapped.length;
+        } else {
+            textarea.selectionStart = start + tag.length + 2;
+            textarea.selectionEnd = start + tag.length + 2;
+        }
+    }
+
+    function insertText(text) {
+        const textarea = document.getElementById("postText");
+        const start = textarea.selectionStart;
+        const end = textarea.selectionEnd;
+
+        const before = textarea.value.substring(0, start);
+        const after = textarea.value.substring(end);
+
+        textarea.value = before + text + after;
+        textarea.focus();
+        textarea.selectionStart = start + text.length;
+        textarea.selectionEnd = start + text.length;
+    }
+
+    function createLink() {
+        const textarea = document.getElementById("postText");
+        const start = textarea.selectionStart;
+        const end = textarea.selectionEnd;
+        const selected = textarea.value.substring(start, end);
+
+        const url = prompt("Вставь ссылку:");
+        if (!url) {
+            return;
+        }
+
+        const label = selected || url;
+        const link = `<a href="${url}">${label}</a>`;
+
+        const before = textarea.value.substring(0, start);
+        const after = textarea.value.substring(end);
+
+        textarea.value = before + link + after;
+        textarea.focus();
+        textarea.selectionStart = start;
+        textarea.selectionEnd = start + link.length;
+    }
+
+    document.addEventListener("keydown", function(event) {
+        if (!event.ctrlKey && !event.metaKey) {
+            return;
+        }
+
+        if (event.code === "KeyB") {
+            event.preventDefault();
+            wrapText("b");
+        }
+
+        if (event.code === "KeyI") {
+            event.preventDefault();
+            wrapText("i");
+        }
+
+        if (event.code === "KeyK") {
+            event.preventDefault();
+            createLink();
+        }
+    });
+</script>
 <body>
     <div class="container">
         <h1>Редактировать публикацию</h1>
@@ -102,7 +190,18 @@
 
         {% if post %}
             <form method="post" action="/scheduled/{{ post.id }}/edit">
-                <textarea name="text" required>{{ post.text }}</textarea>
+                <div style="display: flex; gap: 8px; margin-bottom: 10px; flex-wrap: wrap;">
+                    <button type="button" onclick="wrapText('b')">Жирный</button>
+                    <button type="button" onclick="wrapText('i')">Курсив</button>
+                    <button type="button" onclick="createLink()">Ссылка</button>
+                    <button type="button" onclick="insertText('😊')">😊</button>
+                    <button type="button" onclick="insertText('🔥')">🔥</button>
+                    <button type="button" onclick="insertText('📚')">📚</button>
+                    <button type="button" onclick="insertText('🎓')">🎓</button>
+                    <button type="button" onclick="insertText('✅')">✅</button>
+                </div>
+
+                <textarea id="postText" name="text" required>{{ post.text }}</textarea>
 
                 <div class="platforms">
                     <label class="platform">
