@@ -2,7 +2,7 @@ from datetime import datetime
 from zoneinfo import ZoneInfo
 
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
-
+from app.services.formatter import prepare_html_text, strip_html_formatting
 from app.config import settings
 from app.services.max_client import MaxClient
 from app.services.scheduled_posts import (
@@ -38,25 +38,32 @@ async def publish_to_platform(
 ) -> str:
     if platform == "telegram":
         telegram = TelegramClient()
-        await telegram.send_post(text, media_files)
+        await telegram.send_post(
+            prepare_html_text(text),
+            media_files,
+            parse_mode="HTML",
+        )
         return "Telegram: опубликовано"
 
     if platform == "max":
         max_client = MaxClient()
-        await max_client.send_post(text, media_files)
+        await max_client.send_post(
+            prepare_html_text(text),
+            media_files,
+            text_format="html",
+        )
         return "MAX: опубликовано"
 
     if platform == "vk":
         vk_client = VkClient()
+        vk_text = strip_html_formatting(text)
 
         if media_files:
-            await vk_client.send_text_with_photos(text, media_files)
+            await vk_client.send_text_with_photos(vk_text, media_files)
         else:
-            await vk_client.send_text(text)
+            await vk_client.send_text(vk_text)
 
         return "VK: опубликовано"
-
-    raise ValueError(f"Unknown platform: {platform}")
 
 
 async def process_scheduled_posts() -> None:

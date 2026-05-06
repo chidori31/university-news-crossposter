@@ -3,7 +3,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, File, Form, Request, UploadFile
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
-
+from app.services.formatter import prepare_html_text, strip_html_formatting
 from app.database import init_database
 from app.services.max_client import MaxClient
 from app.services.scheduled_posts import (
@@ -143,7 +143,13 @@ async def create_post(
         if "telegram" in selected_platforms:
             try:
                 telegram = TelegramClient()
-                await telegram.send_post(text, media_files_data)
+                telegram_text = prepare_html_text(text)
+
+                await telegram.send_post(
+                    telegram_text,
+                    media_files_data,
+                    parse_mode="HTML",
+                )
 
                 results.append({
                     "platform": "Telegram",
@@ -160,7 +166,13 @@ async def create_post(
         if "max" in selected_platforms:
             try:
                 max_client = MaxClient()
-                await max_client.send_post(text, media_files_data)
+                max_text = prepare_html_text(text)
+
+                await max_client.send_post(
+                    max_text,
+                    media_files_data,
+                    text_format="html",
+                )
 
                 results.append({
                     "platform": "MAX",
@@ -177,11 +189,12 @@ async def create_post(
         if "vk" in selected_platforms:
             try:
                 vk_client = VkClient()
+                vk_text = strip_html_formatting(text)
 
                 if media_files_data:
-                    await vk_client.send_text_with_photos(text, media_files_data)
+                    await vk_client.send_text_with_photos(vk_text, media_files_data)
                 else:
-                    await vk_client.send_text(text)
+                    await vk_client.send_text(vk_text)
 
                 results.append({
                     "platform": "VK",

@@ -43,6 +43,7 @@ class TelegramClient:
         self,
         media: dict,
         caption: str | None = None,
+        parse_mode: str | None = None,
     ) -> dict:
         self._validate_settings()
 
@@ -55,6 +56,9 @@ class TelegramClient:
         if caption:
             data["caption"] = caption
 
+        if parse_mode:
+            data["parse_mode"] = parse_mode
+
         files = {
             "photo": (
                 media["filename"],
@@ -62,7 +66,6 @@ class TelegramClient:
                 media["content_type"],
             )
         }
-
         async with httpx.AsyncClient(timeout=30) as client:
             response = await client.post(url, data=data, files=files)
             response.raise_for_status()
@@ -72,6 +75,7 @@ class TelegramClient:
         self,
         media: dict,
         caption: str | None = None,
+        parse_mode: str | None = None,
     ) -> dict:
         self._validate_settings()
 
@@ -83,6 +87,9 @@ class TelegramClient:
 
         if caption:
             data["caption"] = caption
+
+        if parse_mode:
+            data["parse_mode"] = parse_mode
 
         files = {
             "video": (
@@ -101,6 +108,7 @@ class TelegramClient:
         self,
         media_files: list[dict],
         caption: str | None = None,
+        parse_mode: str | None = None,
     ) -> dict:
         self._validate_settings()
 
@@ -127,6 +135,9 @@ class TelegramClient:
             if index == 0 and caption:
                 item["caption"] = caption
 
+                if parse_mode:
+                    item["parse_mode"] = parse_mode
+
             media_payload.append(item)
 
             files[file_key] = (
@@ -145,9 +156,14 @@ class TelegramClient:
             response.raise_for_status()
             return response.json()
 
-    async def send_post(self, text: str, media_files: list[dict]) -> None:
+    async def send_post(
+        self,
+        text: str,
+        media_files: list[dict],
+        parse_mode: str | None = None,
+    ) -> None:
         if not media_files:
-            await self.send_text(text)
+            await self.send_text(text, parse_mode=parse_mode)
             return
 
         caption = text if len(text) <= TELEGRAM_CAPTION_LIMIT else None
@@ -156,19 +172,23 @@ class TelegramClient:
             media = media_files[0]
 
             if caption is None:
-                await self.send_text(text)
+                await self.send_text(text, parse_mode=parse_mode)
 
             if media["kind"] == "image":
-                await self.send_photo(media, caption=caption)
+                await self.send_photo(media, caption=caption, parse_mode=parse_mode)
                 return
 
             if media["kind"] == "video":
-                await self.send_video(media, caption=caption)
+                await self.send_video(media, caption=caption, parse_mode=parse_mode)
                 return
 
             raise ValueError(f"Unsupported Telegram media type: {media['content_type']}")
 
         if caption is None:
-            await self.send_text(text)
+            await self.send_text(text, parse_mode=parse_mode)
 
-        await self.send_media_group(media_files, caption=caption)
+        await self.send_media_group(
+            media_files,
+            caption=caption,
+            parse_mode=parse_mode,
+        )
