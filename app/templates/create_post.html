@@ -190,73 +190,73 @@
 <body>
     <div class="container">
         <h1>Создать публикацию</h1>
+        <form method="post" action="/create" enctype="multipart/form-data">
+            {% if results %}
+                <div class="results">
+                    {% for result in results %}
+                        <div class="result {{ result.type }}">
+                            <b>{{ result.platform }}</b>: {{ result.message }}
+                        </div>
+                    {% endfor %}
+                </div>
+            {% endif %}
 
-        {% if results %}
-            <div class="results">
-                {% for result in results %}
-                    <div class="result {{ result.type }}">
-                        <b>{{ result.platform }}</b>: {{ result.message }}
-                    </div>
-                {% endfor %}
+            <div style="display: flex; gap: 8px; margin-bottom: 10px; flex-wrap: wrap;">
+                <button type="button" onclick="wrapText('b')">Жирный Ctrl+B</button>
+                <button type="button" onclick="wrapText('i')">Курсив Ctrl+I</button>
+                <button type="button" onclick="createLink()">Ссылка Ctrl+K</button>
+
+                <button type="button" onclick="insertText('😊')">😊</button>
+                <button type="button" onclick="insertText('🔥')">🔥</button>
+                <button type="button" onclick="insertText('📚')">📚</button>
+                <button type="button" onclick="insertText('🎓')">🎓</button>
+                <button type="button" onclick="insertText('✅')">✅</button>
             </div>
-        {% endif %}
 
-        <div style="display: flex; gap: 8px; margin-bottom: 10px; flex-wrap: wrap;">
-            <button type="button" onclick="wrapText('b')">Жирный Ctrl+B</button>
-            <button type="button" onclick="wrapText('i')">Курсив Ctrl+I</button>
-            <button type="button" onclick="createLink()">Ссылка Ctrl+K</button>
+            <textarea id="postText" name="text" placeholder="Вставь текст новости..." required>{{ text or "" }}</textarea>
+                <div style="margin-top: 16px;">
+                    <label><b>Фото/видео к публикации:</b></label><br><br>
+                    <input type="file" name="media_files" multiple accept="image/*,video/*">
+                </div>
+                <div class="platforms">
+                    <label class="platform">
+                        <input type="checkbox" name="platforms" value="telegram"
+                            {% if not selected_platforms or "telegram" in selected_platforms %}checked{% endif %}>
+                        Telegram
+                    </label>
 
-            <button type="button" onclick="insertText('😊')">😊</button>
-            <button type="button" onclick="insertText('🔥')">🔥</button>
-            <button type="button" onclick="insertText('📚')">📚</button>
-            <button type="button" onclick="insertText('🎓')">🎓</button>
-            <button type="button" onclick="insertText('✅')">✅</button>
-        </div>
+                    <label class="platform">
+                        <input type="checkbox" name="platforms" value="max"
+                            {% if "max" in selected_platforms %}checked{% endif %}>
+                        MAX
+                    </label>
 
-        <textarea id="postText" name="text" placeholder="Вставь текст новости..." required>{{ text or "" }}</textarea>
-            <div style="margin-top: 16px;">
-                <label><b>Фото/видео к публикации:</b></label><br><br>
-                <input type="file" name="media_files" multiple accept="image/*,video/*">
-            </div>
-            <div class="platforms">
-                <label class="platform">
-                    <input type="checkbox" name="platforms" value="telegram"
-                        {% if not selected_platforms or "telegram" in selected_platforms %}checked{% endif %}>
-                    Telegram
-                </label>
+                    <label class="platform">
+                        <input type="checkbox" name="platforms" value="vk"
+                            {% if "vk" in selected_platforms %}checked{% endif %}>
+                        VK
+                    </label>
+                </div>
+                <div style="margin: 18px 0;">
+                    <label><b>Время публикации:</b></label><br><br>
 
-                <label class="platform">
-                    <input type="checkbox" name="platforms" value="max"
-                        {% if "max" in selected_platforms %}checked{% endif %}>
-                    MAX
-                </label>
+                    <label>
+                        <input type="radio" name="publish_mode" value="now" checked>
+                        Опубликовать сейчас
+                    </label>
 
-                <label class="platform">
-                    <input type="checkbox" name="platforms" value="vk"
-                        {% if "vk" in selected_platforms %}checked{% endif %}>
-                    VK
-                </label>
-            </div>
-            <div style="margin: 18px 0;">
-                <label><b>Время публикации:</b></label><br><br>
+                    <br>
 
-                <label>
-                    <input type="radio" name="publish_mode" value="now" checked>
-                    Опубликовать сейчас
-                </label>
+                    <label>
+                        <input type="radio" name="publish_mode" value="schedule">
+                        Запланировать
+                    </label>
 
-                <br>
+                    <br><br>
 
-                <label>
-                    <input type="radio" name="publish_mode" value="schedule">
-                    Запланировать
-                </label>
-
-                <br><br>
-
-                <input type="datetime-local" name="publish_at">
-            </div>
-            <button type="submit">Опубликовать</button>
+                    <input type="datetime-local" name="publish_at">
+                </div>
+                <button type="submit">Опубликовать</button>
         </form>
 
         <div class="hint">
