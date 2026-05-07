@@ -283,11 +283,53 @@
     });
 
     document.addEventListener("DOMContentLoaded", updatePreview);
+    function confirmPublication() {
+        const publishMode = document.querySelector('input[name="publish_mode"]:checked')?.value;
+        const publishAt = document.querySelector('input[name="publish_at"]')?.value;
+        const selectedPlatforms = Array.from(
+            document.querySelectorAll('input[name="platforms"]:checked')
+        ).map(input => input.value);
+
+        const mediaInput = document.getElementById("mediaFiles");
+        const mediaCount = mediaInput && mediaInput.files ? mediaInput.files.length : 0;
+
+        if (selectedPlatforms.length === 0) {
+            alert("Выбери хотя бы одну площадку для публикации.");
+            return false;
+        }
+
+        let message = "";
+
+        if (publishMode === "schedule") {
+            if (!publishAt) {
+                alert("Укажи дату и время для отложенной публикации.");
+                return false;
+            }
+
+            message += `Точно запланировать публикацию?\n\n`;
+            message += `Время: ${publishAt}\n`;
+        } else {
+            message += "Точно опубликовать сейчас?\n\n";
+        }
+
+        message += `Площадки: ${selectedPlatforms.join(", ")}\n`;
+        message += `Медиафайлов: ${mediaCount}\n`;
+
+        if (selectedPlatforms.includes("max")) {
+            message += "\n⚠️ MAX пока не проверен без токена.";
+        }
+
+        if (selectedPlatforms.includes("vk") && mediaCount > 0) {
+            message += "\n⚠️ VK с медиа пока может не сработать из-за ограничений токена.";
+        }
+
+        return confirm(message);
+    }
 </script>
 <body>
     <div class="container">
         <h1>Создать публикацию</h1>
-        <form method="post" action="/create" enctype="multipart/form-data">
+        <form method="post" action="/create" enctype="multipart/form-data" onsubmit="return confirmPublication();">
             {% if results %}
                 <div class="results">
                     {% for result in results %}
