@@ -127,6 +127,8 @@
             textarea.selectionStart = start + tag.length + 2;
             textarea.selectionEnd = start + tag.length + 2;
         }
+
+        updatePreview();
     }
 
     function insertText(text) {
@@ -141,6 +143,8 @@
         textarea.focus();
         textarea.selectionStart = start + text.length;
         textarea.selectionEnd = start + text.length;
+
+        updatePreview();
     }
 
     function createLink() {
@@ -164,6 +168,97 @@
         textarea.focus();
         textarea.selectionStart = start;
         textarea.selectionEnd = start + link.length;
+
+        updatePreview();
+    }
+
+    function escapeHtml(text) {
+        return text
+            .replaceAll("&", "&amp;")
+            .replaceAll("<", "&lt;")
+            .replaceAll(">", "&gt;");
+    }
+
+    function renderFormatting(text) {
+        let safeText = escapeHtml(text);
+
+        safeText = safeText.replaceAll("&lt;b&gt;", "<b>");
+        safeText = safeText.replaceAll("&lt;/b&gt;", "</b>");
+        safeText = safeText.replaceAll("&lt;i&gt;", "<i>");
+        safeText = safeText.replaceAll("&lt;/i&gt;", "</i>");
+
+        safeText = safeText.replace(
+            /&lt;a\s+href=(["'])(https?:\/\/.*?)\1&gt;(.*?)&lt;\/a&gt;/g,
+            '<a href="$2" target="_blank" rel="noopener noreferrer">$3</a>'
+        );
+
+        return safeText;
+    }
+
+    function updateTextPreview() {
+        const textarea = document.getElementById("postText");
+        const preview = document.getElementById("textPreview");
+
+        const text = textarea.value.trim();
+
+        if (!text) {
+            preview.innerHTML = "Здесь появится предпросмотр текста";
+            return;
+        }
+
+        preview.innerHTML = renderFormatting(text);
+    }
+
+    function updateMediaPreview() {
+        const input = document.getElementById("mediaFiles");
+        const preview = document.getElementById("mediaPreview");
+
+        preview.innerHTML = "";
+
+        if (!input || !input.files || input.files.length === 0) {
+            return;
+        }
+
+        Array.from(input.files).forEach((file) => {
+            const item = document.createElement("div");
+            item.style.width = "140px";
+            item.style.border = "1px solid #d6e0ee";
+            item.style.borderRadius = "12px";
+            item.style.padding = "8px";
+            item.style.background = "white";
+
+            const url = URL.createObjectURL(file);
+
+            if (file.type.startsWith("image/")) {
+                const img = document.createElement("img");
+                img.src = url;
+                img.style.width = "100%";
+                img.style.borderRadius = "8px";
+                item.appendChild(img);
+            } else if (file.type.startsWith("video/")) {
+                const video = document.createElement("video");
+                video.src = url;
+                video.controls = true;
+                video.style.width = "100%";
+                video.style.borderRadius = "8px";
+                item.appendChild(video);
+            }
+
+            const name = document.createElement("div");
+            name.textContent = file.name;
+            name.style.fontSize = "12px";
+            name.style.marginTop = "6px";
+            name.style.color = "#667085";
+            name.style.wordBreak = "break-word";
+
+            item.appendChild(name);
+            preview.appendChild(item);
+        });
+    }
+
+    function updatePreview() {
+        updateTextPreview();
+        updateMediaPreview();
     }
 
     document.addEventListener("keydown", function(event) {
@@ -186,6 +281,8 @@
             createLink();
         }
     });
+
+    document.addEventListener("DOMContentLoaded", updatePreview);
 </script>
 <body>
     <div class="container">
@@ -213,10 +310,10 @@
                 <button type="button" onclick="insertText('✅')">✅</button>
             </div>
 
-            <textarea id="postText" name="text" placeholder="Вставь текст новости..." required>{{ text or "" }}</textarea>
+            <textarea id="postText" name="text" placeholder="Вставь текст новости..." required oninput="updatePreview()">{{ text or "" }}</textarea>
                 <div style="margin-top: 16px;">
                     <label><b>Фото/видео к публикации:</b></label><br><br>
-                    <input type="file" name="media_files" multiple accept="image/*,video/*">
+                    <input id="mediaFiles" type="file" name="media_files" multiple accept="image/*,video/*" onchange="updatePreview()">
                 </div>
                 <div class="platforms">
                     <label class="platform">
@@ -256,9 +353,20 @@
 
                     <input type="datetime-local" name="publish_at">
                 </div>
+                <div style="margin: 24px 0; padding: 18px; border: 1px solid #d6e0ee; border-radius: 14px; background: #fbfdff;">
+                        <h3 style="margin-top: 0; color: #0b3d91;">Предпросмотр</h3>
+
+                        <div id="textPreview"
+                            style="white-space: pre-wrap; line-height: 1.5; padding: 14px; background: white; border-radius: 12px; border: 1px solid #e1e7ef;">
+                            Здесь появится предпросмотр текста
+                        </div>
+
+                        <div id="mediaPreview"
+                            style="display: flex; gap: 12px; flex-wrap: wrap; margin-top: 14px;">
+                        </div>
+                    </div>
                 <button type="submit">Опубликовать</button>
         </form>
-
         <div class="hint">
             Сейчас реально работает Telegram. MAX и VK добавим следующими адаптерами.
         </div>
