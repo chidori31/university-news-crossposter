@@ -309,3 +309,35 @@ def delete_scheduled_post(post_id: int) -> None:
         )
 
         connection.commit()
+
+def get_post_media_info(post_id: int) -> list[dict]:
+    with get_connection() as connection:
+        rows = connection.execute(
+            """
+            SELECT filename, content_type, kind, file_path
+            FROM scheduled_post_media
+            WHERE post_id = ?
+            ORDER BY id ASC
+            """,
+            (post_id,),
+        ).fetchall()
+
+    media = []
+
+    for row in rows:
+        file_path = Path(row["file_path"])
+
+        if not file_path.exists():
+            continue
+
+        relative_path = file_path.relative_to(Path("app/static"))
+        url = "/static/" + str(relative_path).replace("\\", "/")
+
+        media.append({
+            "filename": row["filename"],
+            "content_type": row["content_type"],
+            "kind": row["kind"],
+            "url": url,
+        })
+
+    return media

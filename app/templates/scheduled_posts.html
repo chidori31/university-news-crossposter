@@ -106,8 +106,29 @@
                         <span class="status {{ post.status }}">{{ post.status }}</span>
                     </div>
 
-                    <div class="text">{{ post.text }}</div>
+                    <div class="text">{{ post.preview_text | safe }}</div>
+                    {% if post.media %}
+                        <div style="display: flex; gap: 12px; flex-wrap: wrap; margin: 12px 0;">
+                            {% for media in post.media %}
+                                <div style="width: 150px; border: 1px solid #d6e0ee; border-radius: 12px; padding: 8px; background: white;">
+                                    {% if media.kind == "image" %}
+                                        <img src="{{ media.url }}"
+                                            alt="{{ media.filename }}"
+                                            style="width: 100%; border-radius: 8px;">
+                                    {% elif media.kind == "video" %}
+                                        <video src="{{ media.url }}"
+                                            controls
+                                            style="width: 100%; border-radius: 8px;">
+                                        </video>
+                                    {% endif %}
 
+                                    <div style="font-size: 12px; color: #667085; margin-top: 6px; word-break: break-word;">
+                                        {{ media.filename }}
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
                     {% if post.status == "scheduled" %}
                         <div style="display: flex; gap: 10px; margin-top: 12px;">
                             <a href="/scheduled/{{ post.id }}/edit"

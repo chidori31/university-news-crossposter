@@ -3,12 +3,14 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, File, Form, Request, UploadFile
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
-from app.services.formatter import prepare_html_text, strip_html_formatting
+from fastapi.staticfiles import StaticFiles
 from app.database import init_database
+from app.services.formatter import prepare_html_text, strip_html_formatting
 from app.services.max_client import MaxClient
 from app.services.scheduled_posts import (
     cancel_scheduled_post,
     delete_scheduled_post,
+    get_post_media_info,
     get_posts_overview,
     get_publish_logs,
     get_scheduled_post,
@@ -32,6 +34,8 @@ app = FastAPI(
     title="University News Crossposter",
     lifespan=lifespan,
 )
+
+app.mount("/static", StaticFiles(directory="app/static"), name="static")
 
 templates = Jinja2Templates(directory="app/templates")
 
@@ -225,6 +229,8 @@ def scheduled_posts_page(request: Request):
 
     for post in posts:
         post["logs"] = get_publish_logs(post["id"])
+        post["media"] = get_post_media_info(post["id"])
+        post["preview_text"] = prepare_html_text(post["text"])
 
     return templates.TemplateResponse(
         request=request,
