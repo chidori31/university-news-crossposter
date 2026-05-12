@@ -329,7 +329,25 @@
 <body>
     <div class="container">
         <h1>Создать публикацию</h1>
-        <form method="post" action="/create" enctype="multipart/form-data" onsubmit="return confirmPublication();">
+            {% if platform_statuses %}
+                <div style="margin: 14px 0 22px 0;">
+                    <b>Статус площадок:</b>
+
+                    <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-top: 10px;">
+                        {% for platform in platform_statuses %}
+                            <div style="padding: 10px 12px; border-radius: 12px; background:
+                                {% if platform.status == 'ready' %}#e8f5e9
+                                {% elif platform.status == 'warning' %}#fff8e1
+                                {% else %}#ffebee
+                                {% endif %};">
+                                <b>{{ platform.name }}</b><br>
+                                <span style="font-size: 13px;">{{ platform.message }}</span>
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            {% endif %}
+                <form method="post" action="/create" enctype="multipart/form-data" onsubmit="return confirmPublication();">
             {% if results %}
                 <div class="results">
                     {% for result in results %}

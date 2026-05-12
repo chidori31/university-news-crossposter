@@ -19,6 +19,10 @@ from app.services.scheduled_posts import (
     save_scheduled_post,
     update_scheduled_post,
 )
+from app.services.platform_rules import (
+    get_platform_statuses,
+    validate_platform_before_publish,
+)
 from app.services.scheduler import shutdown_scheduler, start_scheduler
 from app.services.telegram_client import TelegramClient
 from app.services.vk_client import VkClient
@@ -61,6 +65,7 @@ def create_post_page(request: Request):
             "results": None,
             "text": None,
             "selected_platforms": ["telegram"],
+            "platform_statuses": get_platform_statuses(),
         },
     )
 
@@ -136,6 +141,7 @@ async def create_post(
                 "results": results,
                 "text": text,
                 "selected_platforms": selected_platforms,
+                "platform_statuses": get_platform_statuses(),
             },
         )
 
@@ -147,72 +153,105 @@ async def create_post(
         })
     else:
         if "telegram" in selected_platforms:
-            try:
-                telegram = TelegramClient()
-                telegram_text = prepare_html_text(text)
+            allowed, validation_message = validate_platform_before_publish(
+                "telegram",
+                media_files_data,
+            )
 
-                await telegram.send_post(
-                    telegram_text,
-                    media_files_data,
-                    parse_mode="HTML",
-                )
-
+            if not allowed:
                 results.append({
                     "platform": "Telegram",
-                    "message": "публикация успешно отправлена",
-                    "type": "success",
+                    "message": validation_message,
+                    "type": "warning",
                 })
-            except Exception as error:
-                results.append({
-                    "platform": "Telegram",
-                    "message": f"ошибка отправки: {error}",
-                    "type": "error",
-                })
+            else:
+                try:
+                    telegram = TelegramClient()
+                    telegram_text = prepare_html_text(text)
+
+                    await telegram.send_post(
+                        telegram_text,
+                        media_files_data,
+                        parse_mode="HTML",
+                    )
+
+                    results.append({
+                        "platform": "Telegram",
+                        "message": "публикация успешно отправлена",
+                        "type": "success",
+                    })
+                except Exception as error:
+                    results.append({
+                        "platform": "Telegram",
+                        "message": f"ошибка отправки: {error}",
+                        "type": "error",
+                    })
 
         if "max" in selected_platforms:
-            try:
-                max_client = MaxClient()
-                max_text = prepare_html_text(text)
+            allowed, validation_message = validate_platform_before_publish(
+                "max",
+                media_files_data,
+            )
 
-                await max_client.send_post(
-                    max_text,
-                    media_files_data,
-                    text_format="html",
-                )
-
+            if not allowed:
                 results.append({
                     "platform": "MAX",
-                    "message": "публикация успешно отправлена",
-                    "type": "success",
+                    "message": validation_message,
+                    "type": "warning",
                 })
-            except Exception as error:
-                results.append({
-                    "platform": "MAX",
-                    "message": f"ошибка отправки: {error}",
-                    "type": "error",
-                })
+            else:
+                try:
+                    max_client = MaxClient()
+                    max_text = prepare_html_text(text)
+
+                    await max_client.send_post(
+                        max_text,
+                        media_files_data,
+                        text_format="html",
+                    )
+
+                    results.append({
+                        "platform": "MAX",
+                        "message": "публикация успешно отправлена",
+                        "type": "success",
+                    })
+                except Exception as error:
+                    results.append({
+                        "platform": "MAX",
+                        "message": f"ошибка отправки: {error}",
+                        "type": "error",
+                    })
 
         if "vk" in selected_platforms:
-            try:
-                vk_client = VkClient()
-                vk_text = strip_html_formatting(text)
+            allowed, validation_message = validate_platform_before_publish(
+                "vk",
+                media_files_data,
+            )
 
-                if media_files_data:
-                    await vk_client.send_text_with_photos(vk_text, media_files_data)
-                else:
+            if not allowed:
+                results.append({
+                    "platform": "VK",
+                    "message": validation_message,
+                    "type": "warning",
+                })
+            else:
+                try:
+                    vk_client = VkClient()
+                    vk_text = strip_html_formatting(text)
+
                     await vk_client.send_text(vk_text)
 
-                results.append({
-                    "platform": "VK",
-                    "message": "публикация успешно отправлена",
-                    "type": "success",
-                })
-            except Exception as error:
-                results.append({
-                    "platform": "VK",
-                    "message": f"ошибка отправки: {error}",
-                    "type": "error",
-                })
+                    results.append({
+                        "platform": "VK",
+                        "message": "публикация успешно отправлена",
+                        "type": "success",
+                    })
+                except Exception as error:
+                    results.append({
+                        "platform": "VK",
+                        "message": f"ошибка отправки: {error}",
+                        "type": "error",
+                    })
 
     return templates.TemplateResponse(
         request=request,
@@ -221,6 +260,7 @@ async def create_post(
             "results": results,
             "text": text,
             "selected_platforms": selected_platforms,
+            "platform_statuses": get_platform_statuses(),
         },
     )
 
@@ -239,6 +279,7 @@ def scheduled_posts_page(request: Request):
         name="scheduled_posts.html",
         context={
             "posts": posts,
+            "platform_statuses": get_platform_statuses(),
         },
     )
 
@@ -264,6 +305,7 @@ def edit_scheduled_post_page(request: Request, post_id: int):
                 "post": None,
                 "status": "Публикация не найдена",
                 "status_type": "error",
+                "platform_statuses": get_platform_statuses(),
             },
         )
 
@@ -277,6 +319,7 @@ def edit_scheduled_post_page(request: Request, post_id: int):
                 "post": post,
                 "status": "Редактировать можно только отложенные публикации",
                 "status_type": "error",
+                "platform_statuses": get_platform_statuses(),
             },
         )
 
@@ -287,6 +330,7 @@ def edit_scheduled_post_page(request: Request, post_id: int):
             "post": post,
             "status": None,
             "status_type": None,
+            "platform_statuses": get_platform_statuses(),
         },
     )
 
@@ -324,6 +368,7 @@ async def edit_scheduled_post(
                 "post": post,
                 "status": "Редактировать можно только отложенные публикации",
                 "status_type": "error",
+                "platform_statuses": get_platform_statuses(),
             },
         )
 
@@ -339,6 +384,7 @@ async def edit_scheduled_post(
                 "post": post,
                 "status": "Выбери хотя бы одну площадку",
                 "status_type": "error",
+                "platform_statuses": get_platform_statuses(),
             },
         )
 
@@ -386,6 +432,7 @@ async def edit_scheduled_post(
             "post": updated_post,
             "status": "Публикация обновлена",
             "status_type": None,
+            "platform_statuses": get_platform_statuses(),
         },
     )
 
