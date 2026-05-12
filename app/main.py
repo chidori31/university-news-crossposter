@@ -8,8 +8,10 @@ from app.database import init_database
 from app.services.formatter import prepare_html_text, strip_html_formatting
 from app.services.max_client import MaxClient
 from app.services.scheduled_posts import (
+    add_media_to_scheduled_post,
     cancel_scheduled_post,
     delete_scheduled_post,
+    delete_scheduled_post_media,
     get_post_media_info,
     get_posts_overview,
     get_publish_logs,
@@ -265,6 +267,8 @@ def edit_scheduled_post_page(request: Request, post_id: int):
             },
         )
 
+    post["media"] = get_post_media_info(post_id)
+
     if post["status"] != "scheduled":
         return templates.TemplateResponse(
             request=request,
@@ -288,12 +292,13 @@ def edit_scheduled_post_page(request: Request, post_id: int):
 
 
 @app.post("/scheduled/{post_id}/edit", response_class=HTMLResponse)
-def edit_scheduled_post(
+async def edit_scheduled_post(
     request: Request,
     post_id: int,
     text: str = Form(...),
     platforms: list[str] | None = Form(default=None),
     publish_at: str = Form(...),
+    media_files: list[UploadFile] | None = File(default=None),
 ):
     selected_platforms = platforms or []
     post = get_scheduled_post(post_id)
@@ -308,6 +313,8 @@ def edit_scheduled_post(
                 "status_type": "error",
             },
         )
+
+    post["media"] = get_post_media_info(post_id)
 
     if post["status"] != "scheduled":
         return templates.TemplateResponse(
@@ -335,6 +342,27 @@ def edit_scheduled_post(
             },
         )
 
+    media_files_data = []
+
+    if media_files:
+        for file in media_files:
+            if not file.filename:
+                continue
+
+            if file.content_type and file.content_type.startswith("image/"):
+                kind = "image"
+            elif file.content_type and file.content_type.startswith("video/"):
+                kind = "video"
+            else:
+                continue
+
+            media_files_data.append({
+                "filename": file.filename,
+                "content_type": file.content_type,
+                "kind": kind,
+                "data": await file.read(),
+            })
+
     update_scheduled_post(
         post_id=post_id,
         text=text,
@@ -342,7 +370,14 @@ def edit_scheduled_post(
         publish_at=publish_at,
     )
 
+    if media_files_data:
+        add_media_to_scheduled_post(
+            post_id=post_id,
+            media_files_data=media_files_data,
+        )
+
     updated_post = get_scheduled_post(post_id)
+    updated_post["media"] = get_post_media_info(post_id)
 
     return templates.TemplateResponse(
         request=request,
@@ -354,6 +389,16 @@ def edit_scheduled_post(
         },
     )
 
+@app.post("/scheduled/{post_id}/media/{media_id}/delete")
+def delete_scheduled_media(post_id: int, media_id: int):
+    delete_scheduled_post_media(
+        post_id=post_id,
+        media_id=media_id,
+    )
+
+    return {
+        "status": "ok",
+    }
 
 @app.post("/scheduled/{post_id}/delete")
 def delete_post(post_id: int):

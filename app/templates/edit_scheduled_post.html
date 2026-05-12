@@ -90,94 +90,6 @@
         }
     </style>
 </head>
-<script>
-    function wrapText(tag) {
-        const textarea = document.getElementById("postText");
-        const start = textarea.selectionStart;
-        const end = textarea.selectionEnd;
-        const selected = textarea.value.substring(start, end);
-
-        let wrapped;
-
-        if (selected) {
-            wrapped = `<${tag}>${selected}</${tag}>`;
-        } else {
-            wrapped = `<${tag}></${tag}>`;
-        }
-
-        const before = textarea.value.substring(0, start);
-        const after = textarea.value.substring(end);
-
-        textarea.value = before + wrapped + after;
-        textarea.focus();
-
-        if (selected) {
-            textarea.selectionStart = start;
-            textarea.selectionEnd = start + wrapped.length;
-        } else {
-            textarea.selectionStart = start + tag.length + 2;
-            textarea.selectionEnd = start + tag.length + 2;
-        }
-    }
-
-    function insertText(text) {
-        const textarea = document.getElementById("postText");
-        const start = textarea.selectionStart;
-        const end = textarea.selectionEnd;
-
-        const before = textarea.value.substring(0, start);
-        const after = textarea.value.substring(end);
-
-        textarea.value = before + text + after;
-        textarea.focus();
-        textarea.selectionStart = start + text.length;
-        textarea.selectionEnd = start + text.length;
-    }
-
-    function createLink() {
-        const textarea = document.getElementById("postText");
-        const start = textarea.selectionStart;
-        const end = textarea.selectionEnd;
-        const selected = textarea.value.substring(start, end);
-
-        const url = prompt("Вставь ссылку:");
-        if (!url) {
-            return;
-        }
-
-        const label = selected || url;
-        const link = `<a href="${url}">${label}</a>`;
-
-        const before = textarea.value.substring(0, start);
-        const after = textarea.value.substring(end);
-
-        textarea.value = before + link + after;
-        textarea.focus();
-        textarea.selectionStart = start;
-        textarea.selectionEnd = start + link.length;
-    }
-
-    document.addEventListener("keydown", function(event) {
-        if (!event.ctrlKey && !event.metaKey) {
-            return;
-        }
-
-        if (event.code === "KeyB") {
-            event.preventDefault();
-            wrapText("b");
-        }
-
-        if (event.code === "KeyI") {
-            event.preventDefault();
-            wrapText("i");
-        }
-
-        if (event.code === "KeyK") {
-            event.preventDefault();
-            createLink();
-        }
-    });
-</script>
 <body>
     <div class="container">
         <h1>Редактировать публикацию</h1>
@@ -189,7 +101,7 @@
         {% endif %}
 
         {% if post %}
-            <form method="post" action="/scheduled/{{ post.id }}/edit">
+            <form method="post" action="/scheduled/{{ post.id }}/edit" enctype="multipart/form-data">
                 <div style="display: flex; gap: 8px; margin-bottom: 10px; flex-wrap: wrap;">
                     <button type="button" onclick="wrapText('b')">Жирный</button>
                     <button type="button" onclick="wrapText('i')">Курсив</button>
@@ -202,7 +114,43 @@
                 </div>
 
                 <textarea id="postText" name="text" required>{{ post.text }}</textarea>
+                {% if post.media %}
+                    <div style="margin-top: 18px;">
+                        <b>Текущие медиа:</b>
 
+                        <div style="display: flex; gap: 12px; flex-wrap: wrap; margin-top: 12px;">
+                            {% for media in post.media %}
+                                <div style="width: 150px; border: 1px solid #d6e0ee; border-radius: 12px; padding: 8px; background: white;">
+                                    {% if media.kind == "image" %}
+                                        <img src="{{ media.url }}"
+                                            alt="{{ media.filename }}"
+                                            style="width: 100%; border-radius: 8px;">
+                                    {% elif media.kind == "video" %}
+                                        <video src="{{ media.url }}"
+                                            controls
+                                            style="width: 100%; border-radius: 8px;">
+                                        </video>
+                                    {% endif %}
+
+                                    <div style="font-size: 12px; color: #667085; margin-top: 6px; word-break: break-word;">
+                                        {{ media.filename }}
+                                    </div>
+
+                                    <button type="button"
+                                            onclick="deleteMedia({{ post.id }}, {{ media.id }})"
+                                            style="background: #d32f2f; padding: 8px 10px; font-size: 13px; margin-top: 8px;">
+                                        Удалить файл
+                                    </button>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                {% endif %}
+
+                <div style="margin-top: 18px;">
+                    <label><b>Добавить новые фото/видео:</b></label><br><br>
+                    <input type="file" name="media_files" multiple accept="image/*,video/*">
+                </div>
                 <div class="platforms">
                     <label class="platform">
                         <input type="checkbox" name="platforms" value="telegram"
@@ -232,5 +180,110 @@
             </form>
         {% endif %}
     </div>
+    <script>
+        function wrapText(tag) {
+            const textarea = document.getElementById("postText");
+            const start = textarea.selectionStart;
+            const end = textarea.selectionEnd;
+            const selected = textarea.value.substring(start, end);
+
+            let wrapped;
+
+            if (selected) {
+                wrapped = `<${tag}>${selected}</${tag}>`;
+            } else {
+                wrapped = `<${tag}></${tag}>`;
+            }
+
+            const before = textarea.value.substring(0, start);
+            const after = textarea.value.substring(end);
+
+            textarea.value = before + wrapped + after;
+            textarea.focus();
+
+            if (selected) {
+                textarea.selectionStart = start;
+                textarea.selectionEnd = start + wrapped.length;
+            } else {
+                textarea.selectionStart = start + tag.length + 2;
+                textarea.selectionEnd = start + tag.length + 2;
+            }
+        }
+
+        function insertText(text) {
+            const textarea = document.getElementById("postText");
+            const start = textarea.selectionStart;
+            const end = textarea.selectionEnd;
+
+            const before = textarea.value.substring(0, start);
+            const after = textarea.value.substring(end);
+
+            textarea.value = before + text + after;
+            textarea.focus();
+            textarea.selectionStart = start + text.length;
+            textarea.selectionEnd = start + text.length;
+        }
+
+        function createLink() {
+            const textarea = document.getElementById("postText");
+            const start = textarea.selectionStart;
+            const end = textarea.selectionEnd;
+            const selected = textarea.value.substring(start, end);
+
+            const url = prompt("Вставь ссылку:");
+            if (!url) {
+                return;
+            }
+
+            const label = selected || url;
+            const link = `<a href="${url}">${label}</a>`;
+
+            const before = textarea.value.substring(0, start);
+            const after = textarea.value.substring(end);
+
+            textarea.value = before + link + after;
+            textarea.focus();
+            textarea.selectionStart = start;
+            textarea.selectionEnd = start + link.length;
+        }
+
+        document.addEventListener("keydown", function(event) {
+            if (!event.ctrlKey && !event.metaKey) {
+                return;
+            }
+
+            if (event.code === "KeyB") {
+                event.preventDefault();
+                wrapText("b");
+            }
+
+            if (event.code === "KeyI") {
+                event.preventDefault();
+                wrapText("i");
+            }
+
+            if (event.code === "KeyK") {
+                event.preventDefault();
+                createLink();
+            }
+        });
+        async function deleteMedia(postId, mediaId) {
+            const confirmed = confirm("Удалить этот файл?");
+
+            if (!confirmed) {
+                return;
+            }
+
+            const response = await fetch(`/scheduled/${postId}/media/${mediaId}/delete`, {
+                method: "POST",
+            });
+
+            if (response.ok) {
+                window.location.reload();
+            } else {
+                alert("Не удалось удалить файл.");
+            }
+        }
+    </script>
 </body>
 </html>

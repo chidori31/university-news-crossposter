@@ -314,7 +314,7 @@ def get_post_media_info(post_id: int) -> list[dict]:
     with get_connection() as connection:
         rows = connection.execute(
             """
-            SELECT filename, content_type, kind, file_path
+            SELECT id, filename, content_type, kind, file_path
             FROM scheduled_post_media
             WHERE post_id = ?
             ORDER BY id ASC
@@ -334,6 +334,7 @@ def get_post_media_info(post_id: int) -> list[dict]:
         url = "/static/" + str(relative_path).replace("\\", "/")
 
         media.append({
+            "id": row["id"],
             "filename": row["filename"],
             "content_type": row["content_type"],
             "kind": row["kind"],
@@ -341,3 +342,83 @@ def get_post_media_info(post_id: int) -> list[dict]:
         })
 
     return media
+
+
+def add_media_to_scheduled_post(
+    post_id: int,
+    media_files_data: list[dict],
+) -> None:
+    UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
+
+    with get_connection() as connection:
+        for media in media_files_data:
+            extension = Path(media["filename"]).suffix
+            stored_filename = f"{uuid4().hex}{extension}"
+            file_path = UPLOADS_DIR / stored_filename
+
+            with open(file_path, "wb") as file:
+                file.write(media["data"])
+
+            connection.execute(
+                """
+                INSERT INTO scheduled_post_media (
+                    post_id,
+                    filename,
+                    content_type,
+                    kind,
+                    file_path
+                )
+                VALUES (?, ?, ?, ?, ?)
+                """,
+                (
+                    post_id,
+                    media["filename"],
+                    media["content_type"],
+                    media["kind"],
+                    str(file_path),
+                ),
+            )
+
+        connection.commit()
+
+
+def delete_scheduled_post_media(post_id: int, media_id: int) -> None:
+    with get_connection() as connection:
+        post = connection.execute(
+            """
+            SELECT status
+            FROM scheduled_posts
+            WHERE id = ?
+            """,
+            (post_id,),
+        ).fetchone()
+
+        if post is None or post["status"] != "scheduled":
+            return
+
+        media = connection.execute(
+            """
+            SELECT file_path
+            FROM scheduled_post_media
+            WHERE id = ? AND post_id = ?
+            """,
+            (media_id, post_id),
+        ).fetchone()
+
+        if media is None:
+            return
+
+        file_path = Path(media["file_path"])
+
+        if file_path.exists():
+            file_path.unlink()
+
+        connection.execute(
+            """
+            DELETE FROM scheduled_post_media
+            WHERE id = ? AND post_id = ?
+            """,
+            (media_id, post_id),
+        )
+
+        connection.commit()
